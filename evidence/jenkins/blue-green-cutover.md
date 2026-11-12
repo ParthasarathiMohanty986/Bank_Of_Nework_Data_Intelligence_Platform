@@ -25,4 +25,4 @@ All three checks met the 500 ms target in this smoke test. The settlement summar
 | Excess settled amount | 0.00 |
 | Merchant exception count | 61 |
 
-The transaction amount minus the settled amount equals the reported gap. Blue remained healthy and available for rollback after the switch. The rollback exercise is pending.
+The transaction amount minus the settled amount equals the reported gap. Blue remained healthy after the switch and later served the shared URL during the [incident rollback drill](blue-green-incident.md).

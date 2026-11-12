@@ -1,0 +1,74 @@
+{
+  "incident": "Simulated duplicate settlements in Green reporting data",
+  "scope": {
+    "end_date": "2026-10-01",
+    "start_date": "2026-01-01"
+  },
+  "impact": {
+    "payments": 3,
+    "merchants": 3,
+    "excess_minor_units": 56004246
+  },
+  "green_fault_via_preview": {
+    "url": "http://127.0.0.1:8083",
+    "observed_at": "2026-11-12T12:29:21.2222379+00:00",
+    "route": null,
+    "health_http": 200,
+    "health": {
+      "status": "ok"
+    },
+    "summary_http": 200,
+    "summary": {
+      "transaction_count": 31763,
+      "transaction_amount": 136675776.64,
+      "settled_amount": 129429359.85,
+      "settlement_gap": 7246416.79,
+      "settlement_rate": 94.7,
+      "sla_rate": 82.03,
+      "merchant_risk_count": 16,
+      "excess_settled_amount": 560042.46
+    }
+  },
+  "blue_recovery_via_shared_url": {
+    "url": "http://127.0.0.1:8080",
+    "observed_at": "2026-11-12T12:29:21.5506985+00:00",
+    "route": [
+      "blue-v1"
+    ],
+    "health_http": 200,
+    "health": {
+      "status": "ok"
+    },
+    "summary_http": 200,
+    "summary": {
+      "transaction_count": 31763,
+      "transaction_amount": 136675776.64,
+      "settled_amount": 129429359.85,
+      "settlement_gap": 7246416.79,
+      "settlement_rate": 94.7,
+      "sla_rate": 82.03,
+      "merchant_risk_count": 16,
+      "excess_settled_amount": 0.0
+    }
+  },
+  "green_after_cleanup": {
+    "url": "http://127.0.0.1:8083",
+    "observed_at": "2026-11-12T12:29:22.1787163+00:00",
+    "route": null,
+    "health_http": 200,
+    "health": {
+      "status": "ok"
+    },
+    "summary_http": 200,
+    "summary": {
+      "transaction_count": 31763,
+      "transaction_amount": 136675776.64,
+      "settled_amount": 129429359.85,
+      "settlement_gap": 7246416.79,
+      "settlement_rate": 94.7,
+      "sla_rate": 82.03,
+      "merchant_risk_count": 16,
+      "excess_settled_amount": 0.0
+    }
+  }
+}
