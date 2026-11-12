@@ -1,0 +1,20 @@
+{
+  "health": {
+    "status": "ok"
+  },
+  "scope": {
+    "start_date": "2026-01-01",
+    "end_date": "2026-10-01"
+  },
+  "summary": {
+    "transaction_count": 31763,
+    "transaction_amount": "136675776.64",
+    "settled_amount": "129429359.85",
+    "settlement_gap": "7246416.79",
+    "settlement_rate": "94.7",
+    "sla_rate": "82.03",
+    "merchant_risk_count": 16,
+    "excess_settled_amount": "0.0"
+  },
+  "merchant_exception_count": 61
+}
