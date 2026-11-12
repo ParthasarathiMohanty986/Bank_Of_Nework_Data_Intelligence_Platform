@@ -1,0 +1,7 @@
+{
+    "image":  "capstone-settlement:jenkins-2",
+    "image_id":  "sha256:c48ec10b12f9c3649cd539d2ac1b45ea9a78fbf86e7ca1c5da80ea213dd27461",
+    "commit":  null,
+    "archive_sha256":  "9627C721F79CD3B4F89F0A0FB0A575583276FA8A3B7DF9D51E41DB9843235994",
+    "critical_findings":  0
+}
