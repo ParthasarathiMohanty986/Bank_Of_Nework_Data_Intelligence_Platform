@@ -1,0 +1,9 @@
+# Business specification
+
+Payments Operations needs to explain differences between successful payment value and money settled. The Head of Payments monitors overall performance. Analysts filter by inclusive payment dates (India local time) and optionally merchant, review daily totals and ranked merchant gaps, and inspect outstanding and delayed payments. Scope covers analytics on the supplied exports, including incremental batches. Payment execution, exchange rate conversion, and attributing holds to specific bank risk controls are outside scope.
+
+Successful payment attempts determine transaction count and INR volume. For each attempt, credit only completed settlement rows, capped at the original payment amount. Report excess separately as a warning and preserve the actual amount for reconciliation. Gap is successful value less credited settlement value. Settlement rate is credited value divided by successful value. A successful payment is UNSETTLED, PARTIAL, or SETTLED based on credited value. Complete at the first timestamp where cumulative settlement meets the original amount. SLA divides completions within 30 minutes (inclusive) by fully completed payments. Rates with no denominator are null. Partial or unsettled payments older than 30 minutes are overdue as of request time.
+
+The merchant risk KPI counts merchants breaching both settlement rate <95% and SLA <90%. The exceptions table uses either threshold. A null rate does not breach its threshold. Each payment retains the merchant risk effective when it occurred. For merchant summaries display the risk on the most recent successful payment in the selected period. Daily charts group both values by payment date so an older day can change after a new batch.
+
+Acceptance requires an initial and incremental load, replay with no double counting, reconciliation to the cent, historical risk, visible exceptions, the requested dashboard and API contracts, and automated verification.

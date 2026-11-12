@@ -1,0 +1,191 @@
+stages: [validate, test, security, build, package, deploy_dev, smoke_test, deploy_prod]
+
+# The Docker socket is available on the dedicated project runner.
+# Only trusted commits on the protected default branch can use that runner.
+workflow:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_REF_PROTECTED == "true"'
+
+default:
+  tags: [capstone-docker]
+
+.python:
+  image: python:3.11-slim
+  variables:
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+    PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  cache:
+    key:
+      files: [requirements.txt, requirements-dev.txt]
+    paths: [.cache/pip/]
+
+.docker:
+  image: docker:29-cli
+  before_script:
+    - docker info --format '{{.ServerVersion}}'
+    - printf '%s' "$CI_REGISTRY_PASSWORD" | docker login --username "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+
+validate:
+  stage: validate
+  extends: .python
+  script:
+    - python -m compileall -q settlement tests scripts
+    - sh -n scripts/deploy_ci.sh
+    - test -s Dockerfile
+
+test:
+  stage: test
+  extends: .python
+  needs: [validate]
+  script:
+    - mkdir -p reports
+    - python -m pip install -r requirements-dev.txt
+    - python -m pytest -v --junitxml=reports/pytest.xml
+  artifacts:
+    when: always
+    reports:
+      junit: reports/pytest.xml
+    paths: [reports/pytest.xml]
+
+sast:
+  stage: security
+  extends: .python
+  needs:
+    - job: test
+      artifacts: false
+  script:
+    - mkdir -p reports
+    - python -m pip install bandit==1.9.4
+    - python -m bandit -r settlement -f json -o reports/bandit.json
+  artifacts:
+    when: always
+    paths: [reports/bandit.json]
+
+secret_scan:
+  stage: security
+  image:
+    name: ghcr.io/gitleaks/gitleaks:v8.30.1
+    entrypoint: [""]
+  variables:
+    GIT_DEPTH: "0"
+  needs:
+    - job: test
+      artifacts: false
+  script:
+    - mkdir -p reports
+    - gitleaks git --redact=100 --no-banner --report-format json --report-path reports/gitleaks.json .
+  artifacts:
+    when: always
+    paths: [reports/gitleaks.json]
+
+dependency_scan:
+  stage: security
+  extends: .python
+  needs:
+    - job: test
+      artifacts: false
+  script:
+    - mkdir -p reports
+    - python -m pip install pip-audit==2.10.1
+    - python -m pip_audit -r requirements.txt -f json -o reports/dependencies.json
+  artifacts:
+    when: always
+    paths: [reports/dependencies.json]
+
+build:
+  stage: build
+  extends: .docker
+  needs:
+    - job: sast
+      artifacts: false
+    - job: secret_scan
+      artifacts: false
+    - job: dependency_scan
+      artifacts: false
+  script:
+    - |
+      set -eu
+      candidate="$CI_REGISTRY_IMAGE:candidate-$CI_PIPELINE_ID-$CI_JOB_ID"
+      docker build --pull --label "org.opencontainers.image.revision=$CI_COMMIT_SHA" -t "$candidate" .
+      docker push "$candidate"
+      digest="$(docker image inspect --format '{{index .RepoDigests 0}}' "$candidate")"
+      case "$digest" in "$CI_REGISTRY_IMAGE"@sha256:*) ;; *) exit 1 ;; esac
+      printf 'CANDIDATE_IMAGE=%s\n' "$digest" > candidate.env
+  artifacts:
+    reports:
+      dotenv: candidate.env
+
+package:
+  stage: package
+  extends: .docker
+  needs: [build]
+  script:
+    - |
+      set -eu
+      mkdir -p reports
+      export TRIVY_USERNAME="$CI_REGISTRY_USER" TRIVY_PASSWORD="$CI_REGISTRY_PASSWORD"
+      docker run --rm -e TRIVY_USERNAME -e TRIVY_PASSWORD aquasec/trivy@sha256:8f6bb947dbc528902e11f2f5be52f7b519f6a39d5d148f41166f2040499768fb \
+        image --image-src remote --scanners vuln --format json --no-progress "$CANDIDATE_IMAGE" > reports/trivy-image.json
+      critical="$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "CRITICAL")] | length' reports/trivy-image.json)"
+      echo "Critical findings $critical"
+      test "$critical" -eq 0
+      printf 'RELEASE_IMAGE=%s\n' "$CANDIDATE_IMAGE" > release.env
+  before_script:
+    - apk add --no-cache jq
+  artifacts:
+    when: always
+    paths: [reports/trivy-image.json]
+    reports:
+      dotenv: release.env
+
+deploy_dev:
+  stage: deploy_dev
+  extends: .docker
+  needs: [package]
+  resource_group: capstone-dev
+  environment:
+    name: development
+    deployment_tier: development
+  script:
+    - sh scripts/deploy_ci.sh development
+
+smoke_test:
+  stage: smoke_test
+  extends: .docker
+  needs:
+    - job: deploy_dev
+      artifacts: false
+    - job: package
+      artifacts: true
+  resource_group: capstone-dev
+  environment:
+    name: development
+    action: verify
+  script:
+    - mkdir -p reports
+    - test "$(docker inspect --format '{{.Config.Image}}' capstone-development)" = "$RELEASE_IMAGE"
+    - docker exec -i capstone-development python - < scripts/smoke_ci.py > reports/dev-smoke.json
+    - cat reports/dev-smoke.json
+  artifacts:
+    when: always
+    paths: [reports/dev-smoke.json]
+
+deploy_prod:
+  stage: deploy_prod
+  extends: .docker
+  needs:
+    - job: smoke_test
+      artifacts: false
+    - job: package
+      artifacts: true
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_REF_PROTECTED == "true"'
+      when: manual
+      allow_failure: false
+  manual_confirmation: "Deploy the verified image to the production environment?"
+  resource_group: capstone-prod
+  environment:
+    name: production
+    deployment_tier: production
+  script:
+    - sh scripts/deploy_ci.sh production

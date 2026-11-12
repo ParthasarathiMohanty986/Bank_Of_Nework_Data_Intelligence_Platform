@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Merchant Settlement Intelligence</title>
+<link rel="stylesheet" href="/assets/dashboard.css">
+<script src="/assets/dashboard.js" defer></script>
+</head>
+<body>
+<header class="mast"><div class="frame"><span class="mark" aria-hidden="true">▥</span> Payments Operations</div></header>
+<main class="frame">
+<div class="intro"><h1>Merchant settlement</h1><p id="freshness"></p></div>
+<form id="access" class="panel">
+  <label>Operations token <input id="token" type="password" required autocomplete="off"></label>
+  <button>Connect</button>
+</form>
+<form id="filters" class="panel filters" hidden>
+  <label>From <input id="start" type="date" required></label>
+  <label>To <input id="end" type="date" required></label>
+  <label>Merchant ID <input id="merchant" pattern="[A-Za-z0-9_\-]+" maxlength="64" placeholder="All merchants"></label>
+  <button>Apply filters</button><button class="secondary" id="disconnect" type="button">Disconnect</button>
+</form>
+<p id="status" role="status"></p>
+<div id="report" hidden>
+<section class="cards" aria-label="Settlement KPIs" id="cards"></section>
+<div class="charts">
+  <section class="panel"><h2>Daily payment and settlement value</h2><p class="muted">Grouped by payment date · IST</p>
+  <p class="legend"><span class="payment"></span> Successful payments <span class="settled"></span> Settled</p>
+  <canvas id="trend" height="250" role="img" aria-label="Daily payment and settlement value"></canvas>
+  <details><summary>Daily values</summary><div class="daily-scroll" id="daily-values"></div></details></section>
+  <section class="panel"><h2>Top 10 merchant gaps</h2><div id="gaps"></div></section>
+</div>
+<section class="panel table-panel"><h2>Merchant exceptions</h2><p class="muted">Settlement rate below 95% or SLA below 90%.</p>
+<div class="scroll"><table><thead><tr><th>Merchant</th><th>Risk</th><th>Settlement rate</th><th>SLA</th><th>Gap</th><th scope="col">Investigate</th></tr></thead><tbody id="exceptions"></tbody></table></div>
+</section>
+<section class="panel table-panel"><h2>Payment exceptions</h2><p class="muted">Outstanding or settled after 30 minutes.</p>
+<div class="scroll"><table><thead><tr><th>Payment</th><th>Merchant</th><th>Payment time (IST)</th><th>Status</th><th>Outstanding</th></tr></thead><tbody id="payments"></tbody></table></div>
+<div class="pager"><button class="secondary" id="prev">Previous</button><button class="secondary" id="next">Next</button></div>
+</section>
+</div>
+</main>
+</body>
+</html>
