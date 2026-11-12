@@ -74,11 +74,19 @@ pipeline {
                     if (!$scan.Results) { throw 'Trivy produced no scan results' }
                     $findings = @($scan.Results | ForEach-Object Vulnerabilities | Where-Object { $_ })
                     $critical = @($findings | Where-Object Severity -eq 'CRITICAL').Count
+                    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+                    $stream = [System.IO.File]::OpenRead($archive)
+                    try {
+                        $archiveHash = [System.BitConverter]::ToString($sha256.ComputeHash($stream)).Replace('-', '')
+                    } finally {
+                        $stream.Dispose()
+                        $sha256.Dispose()
+                    }
                     [ordered]@{
                         image = $env:APP_IMAGE
                         image_id = $imageId
                         commit = $env:GIT_COMMIT
-                        archive_sha256 = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash
+                        archive_sha256 = $archiveHash
                         critical_findings = $critical
                     } | ConvertTo-Json | Set-Content (Join-Path $reports 'image.json')
                     if ($critical -gt 0) { throw "Image has $critical critical findings" }
